@@ -1,14 +1,30 @@
-// make a def file of libcocos2d.dll with gendef, gendef is the input of the program
+// make a def file into a proxy 
 
 #include <fstream>
 #include <string>
 #include <iostream>
 
-std::string make_line_proxy(std::string line, std::string original_dll_path) {
-    if (line.starts_with(";")) return "";
+#define double_quote(str) R"(")" + str + R"(")"
+
+std::string make_line_proxy(std::string& line, std::string& original_dll_path) {
+    if (line.starts_with(";"))
+        return "";
+
+    std::string temp;
+    
+    for (const char c: line) {
+        if (c == ';')
+            break;
+        if (std::isspace(c))
+            continue;
+        else
+            temp.push_back(c);
+    }
+
+    line = temp;
 
     if (line.starts_with("LIBRARY") or line.starts_with("EXPORT")) {
-        return line.append("\n");
+        return line += '\n';
     }
 
     bool ends_with_data = false;
@@ -18,13 +34,12 @@ std::string make_line_proxy(std::string line, std::string original_dll_path) {
         ends_with_data = true;
     }
 
-    std::string double_quoted_line = R"(")" + line.append(R"(")");
-    std::string redirection = original_dll_path.append(".").append(double_quoted_line);
+    std::string redirection = double_quote(original_dll_path + '.' + line);
 
     if (ends_with_data)
-        redirection.append(" DATA");
+        redirection += " DATA";
         
-    return double_quoted_line.append(" = ").append(redirection).append("\n");
+    return double_quote(line) + " = " + redirection + '\n';
 }
 
 int main(int argc, char** argv){
@@ -38,7 +53,7 @@ int main(int argc, char** argv){
     std::string original_dll_path = argv[3];
 
     if (!output_proxy_def_name.ends_with(".def")) {
-        output_proxy_def_name.append(".def");
+        output_proxy_def_name += ".def";
     }
 
     std::ifstream def_stream(def_path);
@@ -51,7 +66,7 @@ int main(int argc, char** argv){
     std::string line;
 
     while (std::getline(def_stream, line)) {
-        proxy.append(make_line_proxy(line, original_dll_path));
+        proxy += make_line_proxy(line, original_dll_path);
     }
 
     std::ofstream proxy_def(output_proxy_def_name);
