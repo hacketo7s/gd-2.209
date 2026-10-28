@@ -1,4 +1,4 @@
-// make a def file into a proxy 
+// make a def file into a proxy SPECIFICALLY for mingw gcc 
 
 #include <fstream>
 #include <string>
@@ -7,10 +7,22 @@
 #define double_quote(str) R"(")" + str + R"(")"
 
 std::string make_line_proxy(std::string& line, std::string& original_dll_path) {
-    if (line.starts_with(";"))
-        return "";
+    bool ends_with_data = false;
 
     std::string temp;
+    std::string redirection;
+
+    if (line.starts_with(';'))
+        return "";
+
+    if (line.starts_with("LIBRARY") or line.starts_with("EXPORT")) {
+        return line += '\n';
+    }
+
+    if (line.ends_with("DATA")) {
+        line.erase(line.size() - 5);
+        ends_with_data = true;
+    }
     
     for (const char c: line) {
         if (c == ';')
@@ -23,18 +35,7 @@ std::string make_line_proxy(std::string& line, std::string& original_dll_path) {
 
     line = temp;
 
-    if (line.starts_with("LIBRARY") or line.starts_with("EXPORT")) {
-        return line += '\n';
-    }
-
-    bool ends_with_data = false;
-
-    if (line.ends_with("DATA")) {
-        line.erase(line.size() - 5);
-        ends_with_data = true;
-    }
-
-    std::string redirection = double_quote(original_dll_path + '.' + line);
+    redirection = double_quote(original_dll_path + '.' + line);
 
     if (ends_with_data)
         redirection += " DATA";
